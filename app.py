@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask,render_template,request,jsonify
+from flask import Flask,render_template,request,jsonify,send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_security import Security, SQLAlchemyUserDatastore,roles_required,auth_required, hash_password,verify_password,auth_required,current_user
 from database import db
@@ -12,9 +12,13 @@ from resources.admin import New_sponsors
 from resources.sponsor import CreateCampaign
 
 from my_celery.celery_factory import celery_init_app
+from celery.result import AsyncResult
+
 
 from flask_cors import CORS 
 from flask_caching import Cache
+
+import flask_excel as excel
 
 from flask_restful import  Api # type: ignore
 
@@ -44,6 +48,8 @@ CACHE_REDIS_PORT= 6379
 # Create database connection object
 db.init_app(app)
 cache=Cache(app)
+
+excel.init_excel(app)
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
@@ -81,6 +87,9 @@ app.cache=cache
 
 celery_app=celery_init_app(app)
 
+import my_celery.celery_schedular
+
+
 api.add_resource(getuser, '/users')
 api.add_resource(Register, '/register')
 api.add_resource(New_sponsors,'/new_sponsors')
@@ -102,6 +111,9 @@ def user_login():
             return jsonify({'message' : 'email or password not provided'}), 400
         
         user = user_datastore.find_user(email = email)
+        if user and user.active == False:
+            return jsonify({'message' : 'not allowd'}), 400 
+        
 
         if not user:
             return jsonify({'message' : 'invalid user'}), 400
@@ -496,12 +508,140 @@ def cache():
    
     return {"time":str(datetime.now())}    
 
-from my_celery.task import add
+from my_celery.task import add,create_csv
 
-@app.route('/testing_celery')
-def testing_celery():
-    task=add.delay(10,10)
-    return {'task_id':task.id},200
+
+
+@app.get('/create-csv')
+def createCSV():
+    task = create_csv.delay()
+    return {'task_id' : task.id}, 200
+
+
+@app.get('/get-csv/<id>')
+def getCSV(id):
+    result = AsyncResult(id)
+
+    if result.ready():
+        return send_file(
+            f'./my_celery/user-downloads/{result.result}',
+            as_attachment=True, 
+            mimetype='text/csv'
+            ), 200
+    else:
+        return {'message' : 'task not ready'}, 405
+
+@app.get('/activate_sponsors/<int:id>')
+def activate_sponsors(id):
+    user=user_datastore.find_user(id = id)
+    user.active=True
+    db.session.commit()
+    return{'message':"activated"},200
+
+@app.get('/all_influencers')
+def all_influencers():
+    from models import Influencer
+    influencers=Influencer.query.all()
+    influencer_list=[
+        {
+            "id":influencer.id,
+            "name":influencer.name, 
+            "active":influencer._user.active           
+        }
+        for influencer in influencers
+    ]
+    return jsonify(influencer_list), 200
+
+@app.get('/all_sponsors')
+def all_sponsors():
+
+    sponsors = User.query.filter(User.roles.any(name='sponsor')).all()
+    sponsor_list=[
+        {
+            "id":sponsor.id,
+            "name":sponsor.email,
+            "active":sponsor.active
+                         
+        }
+        for sponsor in sponsors
+    ]
+    print(sponsor_list)
+    return jsonify(sponsor_list), 200
+
+
+app.route('/influencer_details/<int:id>')
+def influencer_details(id):
+    from models import Influencer
+    influencer=Influencer.query.filter_by(id=id).first()
+    influencer_list={
+            "id":influencer.id,
+            "name":influencer.name,
+            "reach":influencer.reach,
+            "platform":influencer.platform,
+            "category":influencer.category,
+            "niche":influencer.niche,   
+            
+        }
+       
+    
+    return (influencer_list), 200
+
+@app.route('/sponsor_details/<int:id>')
+def sponsor_details(id):
+    from models import Campaign
+    sponsor=User.query.filter_by(id=id).first()
+    sponsor_list={
+            "id":sponsor.id,
+            "name":sponsor.email,
+            "active":sponsor.active
+                         
+        }
+    campaigns=Campaign.query.filter_by(sponsor_id=sponsor.id).all()
+    campaigns_list = [
+            {
+                "id": campaign.id,
+                "name":sponsor.email,
+                "name": campaign.name,
+                "start_date": campaign.start_date,
+                "end_date": campaign.end_date,
+                "description": campaign.description
+            }
+            for campaign in campaigns
+        ]
+        
+    
+    return jsonify(campaigns_list), 200
+
+@app.route('/flag_influencer/<int:id>')
+def flag_influencer(id):
+    from models import Influencer
+    influencer=Influencer.query.filter_by(id=id).first()
+    influencer._user.active=False
+    db.session.commit()
+    return {'m':"flagged"},200
+    
+@app.route('/flag_sponsor/<int:id>')
+def flag_sponsor(id):
+    sponsor=User.query.filter_by(id=id).first()
+    sponsor.active=False
+    db.session.commit()
+    return  {'m':"flagged"},200
+
+@app.route('/unflag_influencer/<int:id>')
+def unflag_influencer(id):
+    from models import Influencer
+    influencer=Influencer.query.filter_by(id=id).first()
+    influencer._user.active=True
+    db.session.commit()
+    return {'m':"unflagged"},200
+    
+
+@app.route('/unflag_sponsor/<int:id>')
+def unflag_sponsor(id):
+    sponsor=User.query.filter_by(id=id).first()
+    sponsor.active=True
+    db.session.commit()
+    return {'m':"unflagged"},200
 
 if __name__ == '__main__':
     app.run(debug=True)

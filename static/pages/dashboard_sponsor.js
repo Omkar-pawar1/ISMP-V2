@@ -9,6 +9,7 @@ const dashboard_sponsor={
             <h2> 
                 Create campaigns
             </h2>
+                <button @click="create_csv"> Get Campaign Data </button>
                 Add CURD functionality to campaigns
             <ol>
                 for campaigns
@@ -25,6 +26,27 @@ const dashboard_sponsor={
     
     
     `,
+    methods : {
+        async create_csv(){
+            const res = await fetch(window.location.origin + '/create-csv', {
+                headers : {
+                    'Authentication-Token' : localStorage.getItem('token')
+                }
+            })
+            const task_id = (await res.json()).task_id
+
+            const interval = setInterval(async() => {
+                const res = await fetch(`${window.location.origin}/get-csv/${task_id}` )
+                if (res.ok){
+                    console.log('data is ready')
+                    window.open(`${window.location.origin}/get-csv/${task_id}`)
+                    clearInterval(interval)
+                }
+
+            }, 100)
+            
+        },
+    },
 
 }
 

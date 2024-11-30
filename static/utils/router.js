@@ -10,6 +10,7 @@ import edit_campaign from "../pages/edit_campaign.js";
 import ad_request_form from "../pages/ad_request_form.js";
 import infProfile from "../pages/setinfluecerPro.js";
 import edit_adRequest from "../pages/edit_adRequest.js";
+import influencerDetails from "../pages/influencerDetails.js";
 
 
 
@@ -25,7 +26,8 @@ const routes = [
     {path:'/edit_campaign/:id',component:edit_campaign},
     {path:'/ad_request_form/:id',component:ad_request_form},
     {path:'/set_inf_profile',component:infProfile},
-    {path:'/edit_adRequest/:id',component:edit_adRequest}
+    {path:'/edit_adRequest/:id',component:edit_adRequest},
+    {path:'/infuencerDetails/:id',component:influencerDetails}
   ]
   
 const router = new VueRouter({

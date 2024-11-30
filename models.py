@@ -21,6 +21,7 @@ class Influencer(db.Model):
     category = db.Column(db.String(255),nullable=False)
     niche = db.Column(db.String(255),nullable=False)
     ads=db.relationship('Ad_request',backref='influencer', lazy=True, cascade="all, delete-orphan")
+    _user = db.relationship('User', backref='influencer', lazy=True)
 
 class Sponsor(db.Model):
     __tablename__="sponsor"
@@ -30,6 +31,7 @@ class Sponsor(db.Model):
     sponsor_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
     campaigns=db.relationship('Campaign',backref='sponsor',lazy=True, cascade="all, delete-orphan")
     ads=db.relationship('Ad_request',backref='sponsor', lazy=True, cascade="all, delete-orphan")
+    _user = db.relationship('User', backref='sponsor', lazy=True)
 
 class Campaign(db.Model):
     __tablename__="campaign"
