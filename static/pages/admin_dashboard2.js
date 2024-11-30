@@ -35,6 +35,7 @@ const admin_dashboard2 = {
   
       if (res.ok) {
         this.inactiveInst = await res.json();
+        console.log('token',sessionStorage.getItem("token"))
       }
     },
   };

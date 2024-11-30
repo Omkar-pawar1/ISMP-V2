@@ -34,30 +34,40 @@ const login = {
       if (res.ok) {
         const data = await res.json();
         console.log("Login response data:",data)
-
-        sessionStorage.setItem("token", data.token);
-        console.log("In login.js and this is tokenn",sessionStorage.getItem("token"));
-        sessionStorage.setItem("role", data.role);
-        sessionStorage.setItem("email", data.user);
-
-       console.log("In login.js and this is role",sessionStorage.getItem("role"));
-        console.log("in login.js and this is email",sessionStorage.getItem('email'));
-
-
-        // add data to vuex
-        // this.$store.commit("setRole", data.role);
-        // this.$store.commit("setLogin", true);
-
-        switch (data.role) {
-          // case "stud":
-          //   this.$router.push("/dashboard-stud");
-          //   break;
-          // case "inst":
-          //   this.$router.push("/dashboard-inst");
-          //   break;
-          case "admin":
-            this.$router.push("/admin_dashboard2");
+        if(!data.active){
+          alert("Please wait for approval")
+          this.email=""
+          this.password=""
+          
         }
+        else{
+          sessionStorage.setItem("token", data.token);
+          console.log("In login.js and this is tokenn",sessionStorage.getItem("token"));
+          sessionStorage.setItem("role", data.role);
+          sessionStorage.setItem("email", data.user);
+  
+         console.log("In login.js and this is role",sessionStorage.getItem("role"));
+          console.log("in login.js and this is email",sessionStorage.getItem('email'));
+  
+  
+          // add data to vuex
+          // this.$store.commit("setRole", data.role);
+          // this.$store.commit("setLogin", true);
+  
+          switch (data.role) {
+            case "sponsor":
+              this.$router.push("/sponsor_dashboard");
+              break;
+            case "influencer":
+              this.$router.push("/influencer_dashboard");
+              break;
+            case "admin":
+              this.$router.push("/admin_dashboard2");
+          }
+
+        }
+
+       
       } else {
         console.error("Login Failed");
       }

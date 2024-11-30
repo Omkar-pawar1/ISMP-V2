@@ -27,7 +27,7 @@ export default {
       // this.$store.commit("logout");
       // this.$store.commit("setRole", null);
 
-      this.$router.push("/");
+      this.$router.push("/logout");
     },
   },
   };
